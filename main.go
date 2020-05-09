@@ -20,7 +20,7 @@ func GenerateJWT() (string, error) {
 
 	claims["authorized"] = true
 	claims["user"] = "milossmi"
-	claims["exp"] = time.Now().Add(time.Minute * 30).Unix()
+	claims["exp"] = time.Now().Add(time.Minute * 2000).Unix()
 
 	tokenString, err := token.SignedString(mySigningKey)
 
@@ -34,11 +34,21 @@ func GenerateJWT() (string, error) {
 }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
-	//fmt.Fprintf(w, "Milos Milunovic, Tenderly Task")
 	validToken, err := GenerateJWT()
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
+
+	// client := &http.Client()
+	// req, _ := http.NewRequest("GET", "http://localhost:8081/", nil)
+	// req.Header.Set("Token", validToken)
+
+	// res,err := client.Do(req)
+
+	// if err != nil {
+	// 	fmt.Fprintf(w, "Error: %s", err.Error())
+	// }
+
 	fmt.Fprintf(w, validToken)
 }
 
@@ -75,11 +85,16 @@ func handleRequests() {
 	myRouter.Handle("/user/{name}", isAuthorized(DeleteUser)).Methods("DELETE")
 	myRouter.Handle("/user/{name}/{email}", isAuthorized(UpdateUser)).Methods("PUT")
 
+	// Handle Task CRUD operations
+	myRouter.Handle("/tasks/{userID}", isAuthorized(AllTasks)).Methods("GET")
+	myRouter.Handle("/task/{userID}/{title}", isAuthorized(NewTask)).Methods("POST")
+	myRouter.Handle("/task/{userID}/{taskID}", isAuthorized(DeleteTask)).Methods("DELETE")
+	myRouter.Handle("/task/update/{userID}/{taskID}", isAuthorized(UpdateTask)).Methods("PUT")
+
 	log.Fatal(http.ListenAndServe(":8081", myRouter))
 }
 
 func main() {
-	fmt.Println("Tenderly")
 
 	InitialMigration()
 
