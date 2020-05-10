@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -32,7 +33,7 @@ type Task struct {
 }
 
 func InitialMigration() {
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 
 	if err != nil {
 		fmt.Println(err.Error())
@@ -62,7 +63,7 @@ func respondError(w http.ResponseWriter, code int, message string) {
 
 func AllUsers(w http.ResponseWriter, r *http.Request) {
 
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -75,7 +76,7 @@ func AllUsers(w http.ResponseWriter, r *http.Request) {
 
 func NewUser(w http.ResponseWriter, r *http.Request) {
 
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -97,7 +98,7 @@ func NewUser(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -112,29 +113,37 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	db.Delete(&user)
 
 	respondJSON(w, http.StatusNoContent, nil)
-	fmt.Fprintf(w, "User successfully deleted.")
-
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
 	defer db.Close()
 
 	vars := mux.Vars(r)
-	name := vars["name"]
-	email := vars["email"]
 
-	var user User
-	db.Where("name = ?", name).Find(&user)
+	userID, _ := strconv.Atoi(vars["userID"])
+	user := getUser(userID, w, r)
 
-	user.Email = email
+	if user == nil {
+		return
+	}
 
-	db.Save(&user)
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&user); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	defer r.Body.Close()
 
-	fmt.Fprintf(w, "User successfully updated.")
+	if err := db.Save(&user).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusNoContent, nil)
 }
 
 func getUser(id int, w http.ResponseWriter, r *http.Request) *User {
@@ -181,7 +190,7 @@ func IsAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
 
 var mySigningKey = []byte("mysuperpassword")
 
-func GenerateJWT(w http.ResponseWriter, username string) {
+func GenerateJWT(w http.ResponseWriter, username string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
@@ -189,13 +198,14 @@ func GenerateJWT(w http.ResponseWriter, username string) {
 	exp := time.Now().Add(time.Minute * 2000)
 
 	claims["authorized"] = true
-	claims["user"] = "milossmi"
+	claims["user"] = username
 	claims["exp"] = exp.Unix()
 
 	tokenString, err := token.SignedString(mySigningKey)
 
 	if err != nil {
 		fmt.Errorf("Something went wrong, %s", err.Error())
+		return "", err
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -203,10 +213,11 @@ func GenerateJWT(w http.ResponseWriter, username string) {
 		Value:   tokenString,
 		Expires: exp,
 	})
+	return tokenString, nil
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -224,7 +235,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if user.Password != pass {
 		fmt.Fprintf(w, "Password is incorect.")
 	} else {
-		GenerateJWT(w, name)
-		fmt.Fprintf(w, "Logged In")
+		validToken, _ := GenerateJWT(w, name)
+		fmt.Fprintf(w, validToken)
+		respondJSON(w, http.StatusOK, nil)
 	}
 }

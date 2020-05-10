@@ -39,7 +39,7 @@ func (t *Task) Undo() {
 }
 
 func InitialMigration() {
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 
 	if err != nil {
 		fmt.Println(err.Error())
@@ -67,81 +67,6 @@ func respondError(w http.ResponseWriter, code int, message string) {
 	respondJSON(w, code, map[string]string{"error": message})
 }
 
-func AllUsers(w http.ResponseWriter, r *http.Request) {
-
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
-	if err != nil {
-		panic("Could not connect to database.")
-	}
-	defer db.Close()
-
-	var users []User
-	db.Find(&users)
-	respondJSON(w, http.StatusOK, users)
-}
-
-func NewUser(w http.ResponseWriter, r *http.Request) {
-
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
-	if err != nil {
-		panic("Could not connect to database.")
-	}
-	defer db.Close()
-
-	vars := mux.Vars(r)
-	name := vars["name"]
-	email := vars["email"]
-
-	user := User{}
-	user.Name = name
-	user.Email = email
-
-	db.Create(&user)
-	respondJSON(w, http.StatusCreated, user)
-}
-
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
-
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
-	if err != nil {
-		panic("Could not connect to database.")
-	}
-	defer db.Close()
-
-	vars := mux.Vars(r)
-	name := vars["name"]
-
-	var user User
-	db.Where("name = ?", name).Find(&user)
-
-	db.Delete(&user)
-
-	respondJSON(w, http.StatusNoContent, nil)
-	fmt.Fprintf(w, "User successfully deleted.")
-
-}
-
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
-	if err != nil {
-		panic("Could not connect to database.")
-	}
-	defer db.Close()
-
-	vars := mux.Vars(r)
-	name := vars["name"]
-	email := vars["email"]
-
-	var user User
-	db.Where("name = ?", name).Find(&user)
-
-	user.Email = email
-
-	db.Save(&user)
-
-	fmt.Fprintf(w, "User successfully updated.")
-}
-
 func getUser(id int, w http.ResponseWriter, r *http.Request) *User {
 	user := User{}
 
@@ -163,7 +88,7 @@ func getTask(id int, w http.ResponseWriter, r *http.Request) *Task {
 }
 
 func AllTasks(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -190,7 +115,7 @@ func AllTasks(w http.ResponseWriter, r *http.Request) {
 
 func NewTask(w http.ResponseWriter, r *http.Request) {
 
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -223,7 +148,7 @@ func NewTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteTask(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}
@@ -252,7 +177,7 @@ func DeleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateTask(w http.ResponseWriter, r *http.Request) {
-	db, err = gorm.Open("sqlite3", "/home/milos/Projects/loadBalancer/test.db")
+	db, err = gorm.Open("sqlite3", "../test.db")
 	if err != nil {
 		panic("Could not connect to database.")
 	}

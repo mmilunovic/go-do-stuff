@@ -63,7 +63,6 @@ func (workerList *WorkerList) init(workerRoutes []string) {
 
 	workerList.Latest = -1
 	log.Println("Successfully Created Worker List:", workerList)
-
 }
 
 func (workerList *WorkerList) nextWorker() int {
@@ -93,12 +92,9 @@ func (workerList *WorkerList) loadBalance(w http.ResponseWriter, r *http.Request
 }
 
 var workerList WorkerList
+var myRouter = mux.NewRouter().StrictSlash(true)
 
-func main() {
-
-	InitialMigration()
-
-	var myRouter = mux.NewRouter().StrictSlash(true)
+func handleRequests() {
 
 	workerRoutes := []string{
 		"localhost:8083",
@@ -108,26 +104,35 @@ func main() {
 
 	workerList.init(workerRoutes)
 
-	myRouter.Handle("/lb/tasks/{userID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
+	// Load balancing all tasks related operations
+	myRouter.Handle("/tasks/{userID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
 		workerList.loadBalance(w, r)
 	}))
-	myRouter.Handle("/lb/task/{userID}/{title}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
+	myRouter.Handle("/task/{userID}/{title}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
 		workerList.loadBalance(w, r)
 	}))
-	myRouter.Handle("/lb/task/{userID}/{taskID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
+	myRouter.Handle("/task/{userID}/{taskID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
 		workerList.loadBalance(w, r)
 	}))
-	myRouter.Handle("/lb/task/update/{userID}/{taskID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
+	myRouter.Handle("/task/update/{userID}/{taskID}", IsAuthorized(func(w http.ResponseWriter, r *http.Request) {
 		workerList.loadBalance(w, r)
 	}))
 
+	// Handling user operations localy
 	myRouter.HandleFunc("/login/{name}/{password}", LoginHandler).Methods("POST")
 	myRouter.HandleFunc("/register/{name}/{email}/{password}", NewUser).Methods("POST")
 
 	myRouter.HandleFunc("/users", AllUsers).Methods("GET")
 	myRouter.HandleFunc("/user/{name}", DeleteUser).Methods("DELETE")
-	myRouter.HandleFunc("/user/{name}/{email}", UpdateUser).Methods("PUT")
+	myRouter.HandleFunc("/user/{userID}", UpdateUser).Methods("PUT")
 
 	http.Handle("/", myRouter)
 	log.Fatal(http.ListenAndServe(":8080", myRouter))
+}
+
+func main() {
+
+	InitialMigration()
+
+	handleRequests()
 }
